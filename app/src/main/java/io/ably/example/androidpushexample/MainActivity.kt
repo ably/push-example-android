@@ -1,30 +1,67 @@
 package io.ably.example.androidpushexample
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Toast
 import android.support.v7.widget.Toolbar
+import android.widget.TextView
 import com.google.firebase.iid.FirebaseInstanceId
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
-import io.ably.lib.realtime.AblyRealtime
-import io.ably.lib.realtime.CompletionListener
-import io.ably.lib.types.ClientOptions
-import io.ably.lib.types.ErrorInfo
-import io.ably.lib.types.Message
-import io.ably.lib.types.Param
+import io.ably.lib.realtime.*
+import io.ably.lib.types.*
+import java.util.HashMap
 
 const val TAG = "androidpushexample"
 
 class MainActivity : AppCompatActivity() {
 	val apiKey = "EHuTJg.KaTlBw:iNakMp56GDDlNwvk"
 	val environment = "sandbox"
-	val channelName = "push:test_push_channel_" + java.util.UUID.randomUUID().toString()
+
+	var runId = ""
+	var channelName = ""
 
 	lateinit var client: AblyRealtime
+	lateinit var textView: TextView
+	lateinit var logger: TextViewLogger
+	lateinit var pushMessageReceiver: PushReceiver
+
+	inner class PushReceiver : BroadcastReceiver() {
+		private val lock:Object = Object()
+		private var action:String = ""
+		private var runId:String = ""
+		override fun onReceive(context: Context?, intent: Intent?) {
+			val pushData :HashMap<String, String> = intent!!.getSerializableExtra("data") as HashMap<String, String>
+			synchronized(lock) {
+				this.action = intent!!.action
+				this.runId = pushData.get("runId")!!
+				lock.notifyAll()
+			}
+			onPushMessageReceived(this.action, pushData)
+		}
+
+		fun waitFor(action:String, runId:String) = synchronized(lock) {
+			while(action != this.action || runId != this.runId) {
+				lock.wait()
+			}
+		}
+	}
+
+	fun generateRunId():String {
+		runId = java.util.UUID.randomUUID().toString()
+		channelName = channelName(runId)
+		return runId
+	}
+
+	fun channelName(runId:String):String {
+		return "push:test_push_channel_${runId}"
+	}
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -33,141 +70,377 @@ class MainActivity : AppCompatActivity() {
 		setContentView(R.layout.activity_main)
 		var toolbar = findViewById(R.id.toolbar) as Toolbar
 		setSupportActionBar(toolbar)
+		textView = findViewById(R.id.editText1) as TextView
+		logger = TextViewLogger(textView);
 
+		generateRunId()
+		registerReceiver()
 		initAbly()
 	}
 
 	override fun onDestroy() {
+		unregisterReceiver(pushMessageReceiver)
 		closeAbly()
 		super.onDestroy()
 	}
 
-	fun closeAbly() {
-		object:Thread() {
-			override fun run() {
-				Thread.sleep(2000)
-				pushUnsubscribe(object:CompletionListener {
-					override fun onError(reason: ErrorInfo?) {
-						client.close()
-					}
-					override fun onSuccess() {
-						client.close()
-					}
-				})
-			}
-		}.start()
+	fun registerReceiver() {
+		pushMessageReceiver = PushReceiver()
+		val intentFilter = IntentFilter()
+		intentFilter.addAction(AblyPushMessagingService.PUSH_DATA_ACTION)
+		intentFilter.addAction(AblyPushMessagingService.PUSH_NOTIFICATION_ACTION)
+		registerReceiver(pushMessageReceiver, intentFilter)
 	}
 
+	fun runPushTests():Boolean {
+		logger.i("runPushTests()", "Running push tests")
+		object: Thread(){
+			override fun run() {
+
+				/* prepare */
+				resetLocalDevice()
+				resetActivationState()
+				activatePush(true)
+
+				/* direct publish tests */
+				val testDirectRunId = generateRunId()
+				logger.i("runPushTests()", "Direct runId = ${testDirectRunId}")
+				pushDirectDataTest(testDirectRunId)
+				pushDirectNotificationTest(testDirectRunId)
+
+				/* channel push tests */
+				val testChannelRunId = generateRunId()
+				val testChannelName = channelName(testChannelRunId)
+				logger.i("runPushTests()", "Channel runId = ${testChannelRunId}")
+				realtimeSubscribe(channelName(testChannelRunId), true)
+				pushSubscribe(testChannelName, true)
+				pushPublishDataTest(testChannelRunId)
+				pushPublishNotificationTest(testChannelRunId)
+				pushUnsubscribe(testChannelName, true)
+
+				logger.i("runPushTests()", "Finished")
+			}
+		}.start()
+		return true
+	}
+
+	fun pushDirectDataTest(testRunId:String) {
+		logger.i("pushDirectDataTest()", "${testRunId}")
+		pushDirectData(testRunId, true)
+		logger.i("pushDirectDataTest()", "waiting for notification: ${testRunId}")
+		pushMessageReceiver.waitFor(AblyPushMessagingService.PUSH_DATA_ACTION, testRunId)
+		logger.i("pushDirectDataTest()", "notification received: ${testRunId}")
+	}
+
+	fun pushDirectNotificationTest(testRunId:String) {
+		logger.i("pushDirectNotificationTest()", "${testRunId}")
+		pushDirectNotification(testRunId, true)
+		logger.i("pushDirectNotificationTest()", "waiting for notification: ${testRunId}")
+		pushMessageReceiver.waitFor(AblyPushMessagingService.PUSH_NOTIFICATION_ACTION, testRunId)
+		logger.i("pushDirectNotificationTest()", "notification received: ${testRunId}")
+	}
+
+	fun pushPublishDataTest(testRunId:String) {
+		logger.i("pushPublishDataTest()", "${testRunId}")
+		pushPublishData(testRunId, true)
+		logger.i("pushDirectDataTest()", "waiting for notification: ${testRunId}")
+		pushMessageReceiver.waitFor(AblyPushMessagingService.PUSH_DATA_ACTION, testRunId)
+		logger.i("pushDirectDataTest()", "notification received: ${testRunId}")
+	}
+
+	fun pushPublishNotificationTest(testRunId:String) {
+		logger.i("pushPublishNotificationTest()", "${testRunId}")
+		pushPublishNotification(testRunId, true)
+		logger.i("pushDirectNotificationTest()", "waiting for notification: ${testRunId}")
+		pushMessageReceiver.waitFor(AblyPushMessagingService.PUSH_NOTIFICATION_ACTION, testRunId)
+		logger.i("pushDirectNotificationTest()", "notification received: ${testRunId}")
+	}
+
+	/**
+	 * Initialise the Ably library and connect
+	 */
 	fun initAbly():Boolean {
 		val options = ClientOptions(apiKey)
 		options.environment = environment
-		options.useBinaryProtocol = false
 		options.logLevel = io.ably.lib.util.Log.VERBOSE
-		options.autoConnect = true
 		client = AblyRealtime(options)
+
+		/* this is necessary before the client can perform any operations that depend on
+		 * an Android context, such as making the necessary platform operations for push */
 		client.setAndroidContext(this)
-		return true
-	}
+		logger.i("initAbly()", "initialised library")
 
-	fun activatePush():Boolean {
-		/* activate Firebase */
-		FirebaseInstanceId.getInstance().getToken()
-		/* ensure the Ably library registers any new token with the server */
-		client.push.activate()
-		return true
-	}
-
-	fun realtimeSubscribe():Boolean {
-		val channel = client.channels.get(channelName)
-		channel.subscribe({ message -> displayMessage(message.data as String) })
-		return true
-	}
-
-	fun realtimePublish():Boolean {
-		val channel = client.channels.get(channelName)
-		val message = Message("testMessageName", "testMessageData")
-		channel.publish(message, object: CompletionListener {
-			override fun onSuccess() {
+		/* monitor for connection state changes */
+		client.connection.on(object: ConnectionStateListener {
+			override fun onConnectionStateChanged(state: ConnectionStateListener.ConnectionStateChange?) {
+				when(state!!.current) {
+					ConnectionState.connecting -> logger.w("initAbly()", "connecting")
+					ConnectionState.disconnected -> logger.w("initAbly()", "disconnected")
+					ConnectionState.connected -> logger.i("initAbly()", "connected")
+					ConnectionState.closed -> logger.e("initAbly()", "closed")
+					ConnectionState.failed -> logger.e("initAbly()", "failed: err: " + state!!.reason.message)
+					else -> logger.e("initAbly()", "unexpected connection state: ${state!!.current}")
+				}
 			}
-
-			override fun onError(reason: ErrorInfo?) {
-			}
-
-		});
-		return true
-	}
-
-	fun pushSubscribe():Boolean {
-		val channel = client.channels.get(channelName)
-		channel.push.subscribeDeviceAsync(object: CompletionListener {
-			override fun onSuccess() {
-			}
-
-			override fun onError(reason: ErrorInfo?) {
-			}
-
 		})
 		return true
 	}
 
-	fun pushUnsubscribe():Boolean {
-		val listener = object: CompletionListener {
-			override fun onSuccess() {
+	/**
+	 * Close the Ably connection. This removes any push channel subscription
+	 * and does so after a delay - this is solely so that the background notifications
+	 * work. (That is, we can finish() the activity, and send the notification, and
+	 * the Ably library will remain until after that has happened */
+	fun closeAbly() {
+		/* tell the logger that we're exiting, so it doesn't try to appeand to a disposed UI */
+		logger.close()
+		object:Thread() {
+			override fun run() {
+				Thread.sleep(2000)
+				pushUnsubscribe(channelName, true)
+				client.close()
 			}
-
-			override fun onError(reason: ErrorInfo?) {
-			}
-
-		}
-		return pushUnsubscribe(listener)
+		}.start()
 	}
 
-	fun pushUnsubscribe(listener:CompletionListener):Boolean {
-		val channel = client.channels.get(channelName)
-		channel.push.unsubscribeDeviceAsync(listener)
+	/**
+	 * Initialise the Push target system on this device. This uses the default (local)
+	 * push registrar. This call ensures that the device will create a registration if
+	 * one doesn't already exist, and it is ready to process any token renewal events
+	 * that arise */
+	fun activatePush(wait:Boolean = false):Boolean {
+		/* activate Firebase */
+        logger.i("activatePush()", "initialising Firebase")
+		FirebaseInstanceId.getInstance().getToken()
+		/* ensure the Ably library registers any new token with the server */
+        logger.i("activatePush()", "activating push system .. waiting")
+		client.push.activate()
+		if(wait) {
+			/* FIXME: wait for actual state change */
+			Thread.sleep(4000)
+		}
+		logger.i("activatePush()", ".. activated push system")
 		return true
 	}
 
-	fun pushPublishData():Boolean {
-		val channel = client.channels.get(channelName)
+	/**
+	 * Subscribe for messages on a realtime channel
+	 */
+	fun realtimeSubscribe(testChannelName:String = channelName, wait:Boolean = false):Boolean {
+        logger.i("realtimeSubscribe()", "subscribing to channel")
+		val channel = client.channels.get(testChannelName)
+        channel.on(object:ChannelStateListener {
+            override fun onChannelStateChanged(stateChange: ChannelStateListener.ChannelStateChange?) {
+                when(stateChange!!.current) {
+                    ChannelState.attaching -> logger.w("realtimeSubscribe()", "attaching")
+                    ChannelState.attached -> logger.i("realtimeSubscribe()", "attached")
+                    ChannelState.failed -> logger.e("realtimeSubscribe()", "failed: err: " + stateChange!!.reason.message)
+                    else -> logger.e("realtimeSubscribe()", "unexpected connection state: ${stateChange!!.current}")
+                }
+            }
+        })
+		val waiter = Object()
+		var error:ErrorInfo? = null
+		synchronized(waiter) {
+			channel.attach(object:CompletionListener{
+				override fun onError(reason: ErrorInfo?) {
+					error = reason
+					synchronized(waiter) {waiter.notify()}
+				}
+
+				override fun onSuccess() {
+					channel.subscribe(object: Channel.MessageListener {
+						override fun onMessage(message: Message?) {
+							logger.i("realtimeSubscribe()", "received message: name=${message!!.name}; data=${message.data as String}")
+						}
+					})
+					synchronized(waiter) {waiter.notify()}
+				}
+			})
+			if(wait) {
+				logger.i("realtimeSubscribe()", "waiting for channel attach ..")
+				waiter.wait()
+				logger.i("realtimeSubscribe()", ".. channel attached")
+			}
+		}
+		if(error != null) {
+			throw AblyException.fromErrorInfo(error)
+		}
+		return true
+	}
+
+	/**
+	 * Publish a message via the realtime connection
+	 */
+	fun realtimePublish(testChannelName:String = channelName):Boolean {
+        logger.i("realtimePublish()", "publishing to channel")
+		val channel = client.channels.get(testChannelName)
+		val message = Message("testMessageName", "testMessageData")
+		channel.publish(message, object: CompletionListener {
+			override fun onSuccess() {
+                logger.i("realtimePublish()", "publish success")
+			}
+			override fun onError(reason: ErrorInfo?) {
+                logger.e("realtimePublish()", "failed: err: " + reason!!.message)
+			}
+		});
+		return true
+	}
+
+	/**
+	 * Subscribe this device for push messages on the channel
+	 */
+	fun pushSubscribe(testChannelName:String = channelName, wait:Boolean = true):Boolean {
+        logger.i("pushSubscribe()", "push subscribing to channel")
+		val channel = client.channels.get(testChannelName)
+		val waiter = Object()
+		var error:ErrorInfo? = null
+		synchronized(waiter) {
+			channel.push.subscribeDeviceAsync(object: CompletionListener {
+				override fun onSuccess() {
+					logger.i("pushSubscribe()", "subscribe success")
+					synchronized(waiter) {waiter.notify()}
+				}
+				override fun onError(reason: ErrorInfo?) {
+					logger.e("pushSubscribe()", "failed: err: " + reason!!.message)
+					synchronized(waiter) {error = reason; waiter.notify()}
+				}
+			})
+			if(wait) {
+				logger.i("pushSubscribe()", "waiting for push subscription to channel ..")
+				waiter.wait()
+				logger.i("pushSubscribe()", ".. push subscription complete")
+			}
+		}
+		if(error != null) {
+			throw AblyException.fromErrorInfo(error)
+		}
+		return true
+	}
+
+	/**
+	 * Unsubscribe this device from push messages on the channel
+	 */
+	fun pushUnsubscribe(testChannelName:String = channelName, wait:Boolean = true):Boolean {
+        logger.i("pushUnsubscribe()", "push unsubscribing from channel")
+		val channel = client.channels.get(testChannelName)
+
+		val waiter = Object()
+		var error:ErrorInfo? = null
+		synchronized(waiter) {
+			val listener:CompletionListener? = if(wait) object: CompletionListener {
+				override fun onSuccess() {
+					logger.i("pushUnsubscribe()", "unsubscribe success")
+					synchronized(waiter) {waiter.notify()}
+				}
+				override fun onError(reason: ErrorInfo?) {
+					logger.e("pushUnsubscribe()", "failed: err: " + reason!!.message)
+					synchronized(waiter) {error = reason; waiter.notify()}
+				}
+			} else null
+			channel.push.unsubscribeDeviceAsync(listener)
+			if(wait) {
+				logger.i("pushSubscribe()", "waiting for push subscription to channel ..")
+				waiter.wait()
+				logger.i("pushSubscribe()", ".. push subscription complete")
+			}
+		}
+		if(error != null) {
+			throw AblyException.fromErrorInfo(error)
+		}
+		return true
+	}
+
+	/**
+	 * Send a message on the channel containing push data
+	 */
+	fun pushPublishData(testRunId:String = runId, wait:Boolean = false):Boolean {
+        logger.i("pushPublishData()", "pushing data message to channel")
+		val channel = client.channels.get(channelName(testRunId))
 		val data = JsonObject()
 		data.add("testKey", JsonPrimitive("testValuePublish"))
+		data.add("runId", JsonPrimitive(testRunId))
 		val payload = JsonObject()
 		payload.add("data", data)
 		val extras = JsonObject()
 		extras.add("push", payload)
 		val message = Message("testMessageName", "testMessageData", extras)
-		channel.publish(message, object: CompletionListener {
-			override fun onSuccess() {
+
+		val waiter = Object()
+		var error:ErrorInfo? = null
+		synchronized(waiter) {
+			channel.publish(message, object: CompletionListener {
+				override fun onSuccess() {
+					logger.i("pushPublishData()", "publish success")
+					synchronized(waiter) {waiter.notify()}
+				}
+				override fun onError(reason: ErrorInfo?) {
+					logger.e("pushPublishData()", "failed: err: " + reason!!.message)
+					synchronized(waiter) {error = reason; waiter.notify()}
+				}
+			})
+			if(wait) {
+				logger.i("pushPublishData()", "waiting for push publish to channel ..")
+				waiter.wait()
+				logger.i("pushPublishData()", ".. push publish complete")
 			}
-			override fun onError(reason: ErrorInfo?) {
-			}
-		});
+		}
+		if(error != null) {
+			throw AblyException.fromErrorInfo(error)
+		}
 		return true
 	}
 
-	fun pushPublishNotification():Boolean {
-		val channel = client.channels.get(channelName)
+	/**
+	 * Send a message on the channel containing a push notification
+	 */
+	fun pushPublishNotification(testRunId:String = runId, wait:Boolean = false):Boolean {
+        logger.i("pushPublishNotification()", "pushing notification message to channel")
+		val channel = client.channels.get(channelName(testRunId))
 		val notification = JsonObject()
 		notification.add("title", JsonPrimitive("testNotification"))
 		notification.add("body", JsonPrimitive("Hello from Ably push publish"))
 		val payload = JsonObject()
 		payload.add("notification", notification)
+		val data = JsonObject()
+		data.add("runId", JsonPrimitive(testRunId))
+		payload.add("data", data)
 		val extras = JsonObject()
 		extras.add("push", payload)
 		val message = Message("testMessageName", "testMessageData", extras)
-		channel.publish(message, object: CompletionListener {
-			override fun onSuccess() {
-			}
 
-			override fun onError(reason: ErrorInfo?) {
-			}
+		val waiter = Object()
+		var error:ErrorInfo? = null
+		synchronized(waiter) {
+			channel.publish(message, object : CompletionListener {
+				override fun onSuccess() {
+					logger.i("pushPublishNotification()", "publish success")
+					synchronized(waiter) {waiter.notify()}
+				}
 
-		});
+				override fun onError(reason: ErrorInfo?) {
+					logger.e("pushPublishNotification()", "failed: err: " + reason!!.message)
+					synchronized(waiter) {error = reason; waiter.notify()}
+				}
+			})
+			if (wait) {
+				logger.i("pushPublishNotification()", "waiting for push publish to channel ..")
+				waiter.wait()
+				logger.i("pushPublishNotification()", ".. push publish complete")
+			}
+		}
+		if(error != null) {
+			throw AblyException.fromErrorInfo(error)
+		}
 		return true
 	}
 
+	/**
+	 * Send a message on the channel containing a push notification, after first exiting
+	 * this activity, so this app is in the background when the notification arrives
+	 */
 	fun pushPublishNotificationBackground():Boolean {
+        logger.i("pushPublishNotification()", "pushing notification message directly to device in background")
 		object:Thread() {
 			override fun run() {
 				Thread.sleep(1000)
@@ -178,40 +451,89 @@ class MainActivity : AppCompatActivity() {
 		return true;
 	}
 
-	fun pushDirectData():Boolean {
+	/**
+	 * Send a message directly to the device containing push data
+	 */
+	fun pushDirectData(testRunId:String = runId, wait:Boolean = false):Boolean {
+        logger.i("pushDirectData()", "pushing data message direct to device")
 		val data = JsonObject()
 		data.add("testKey", JsonPrimitive("testValueDirect"))
+		data.add("runId", JsonPrimitive(testRunId))
 		val payload = JsonObject()
 		payload.add("data", data)
 		val deviceId = client.push.getLocalDevice().id
-		client.push.admin.publishAsync(arrayOf(Param("deviceId", deviceId)), payload, object: CompletionListener {
-			override fun onSuccess() {
-			}
 
-			override fun onError(reason: ErrorInfo?) {
+		val waiter = Object()
+		var error:ErrorInfo? = null
+		synchronized(waiter) {
+			client.push.admin.publishAsync(arrayOf(Param("deviceId", deviceId)), payload, object: CompletionListener {
+				override fun onSuccess() {
+					logger.i("pushDirectData()", "publish success")
+					synchronized(waiter) {waiter.notify()}
+				}
+				override fun onError(reason: ErrorInfo?) {
+					logger.e("pushDirectData()", "failed: err: " + reason!!.message)
+					synchronized(waiter) {error = reason; waiter.notify()}
+				}
+			})
+			if (wait) {
+				logger.i("pushDirectData()", "waiting for push direct publish ..")
+				waiter.wait()
+				logger.i("pushDirectData()", ".. push publish complete")
 			}
-
-		})
+		}
+		if(error != null) {
+			throw AblyException.fromErrorInfo(error)
+		}
 		return true
 	}
 
-	fun pushDirectNotification():Boolean {
+	/**
+	 * Send a message directly to the device containing a push notification
+	 */
+	fun pushDirectNotification(testRunId:String = runId, wait:Boolean = false):Boolean {
+        logger.i("pushDirectNotification()", "pushing notification message direct to device")
 		val notification = JsonObject()
 		notification.add("title", JsonPrimitive("testNotification"))
 		notification.add("body", JsonPrimitive("Hello from Ably push direct"))
 		val payload = JsonObject()
 		payload.add("notification", notification)
+		val data = JsonObject()
+		data.add("runId", JsonPrimitive(testRunId))
+		payload.add("data", data)
 		val deviceId = client.push.getLocalDevice().id
-		client.push.admin.publishAsync(arrayOf(Param("deviceId", deviceId)), payload, object: CompletionListener {
-			override fun onSuccess() {
+
+		val waiter = Object()
+		var error:ErrorInfo? = null
+		synchronized(waiter) {
+			client.push.admin.publishAsync(arrayOf(Param("deviceId", deviceId)), payload, object: CompletionListener {
+				override fun onSuccess() {
+					logger.i("pushDirectNotification()", "publish success")
+					synchronized(waiter) {waiter.notify()}
+				}
+				override fun onError(reason: ErrorInfo?) {
+					logger.e("pushDirectNotification()", "failed: err: " + reason!!.message)
+					synchronized(waiter) {error = reason; waiter.notify()}
+				}
+			})
+			if (wait) {
+				logger.i("pushDirectData()", "waiting for push direct publish ..")
+				waiter.wait()
+				logger.i("pushDirectData()", ".. push publish complete")
 			}
-			override fun onError(reason: ErrorInfo?) {
-			}
-		})
+		}
+		if(error != null) {
+			throw AblyException.fromErrorInfo(error)
+		}
 		return true
 	}
 
+	/**
+	 * Send a message directly to the device containing a push notification, after first exiting
+	 * this activity, so this app is in the background when the notification arrives
+	 */
 	fun pushDirectNotificationBackground():Boolean {
+        logger.i("pushDirectNotificationBackground()", "pushing notification message direct to device in background")
 		object:Thread() {
 			override fun run() {
 				Thread.sleep(1000)
@@ -222,29 +544,50 @@ class MainActivity : AppCompatActivity() {
 		return true;
 	}
 
+	/**
+	 * Get details of the LocalDevice
+	 */
 	fun getLocalDevice():Boolean {
 		val localDevice = client.push.getLocalDevice()
-
+        logger.i("getLocalDevice()", "local device id: ${localDevice.id}")
 		return true
 	}
 
+	/**
+	 * Delete any persisted details of the LocalDevice
+	 */
 	fun resetLocalDevice():Boolean {
+        logger.i("resetLocalDevice()", "resetting local device")
 		client.push.getLocalDevice().reset()
 		return true
 	}
 
+	/**
+	 * Get the state of the push activation state machine
+	 */
 	fun getActivationState():Boolean {
-		client.push.activationContext.getActivationStateMachine().current.javaClass.canonicalName
+		val activationState = client.push.activationContext.getActivationStateMachine().current.javaClass.canonicalName
+        logger.i("getActivationState()", "activation state: ${activationState}")
 		return true
 	}
 
+	/**
+	 * Reset the state and delete any persisted details of the push activation state machine
+	 */
 	fun resetActivationState():Boolean {
+        logger.i("resetActivationState()", "resetting activation state")
 		client.push.activationContext.getActivationStateMachine().reset()
 		return true
 	}
 
-	fun displayMessage(message:String) {
-		Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+	fun onPushMessageReceived(action: String, data: HashMap<String, String>) {
+		val actionString = when(action) {
+			AblyPushMessagingService.PUSH_DATA_ACTION -> "push message"
+			AblyPushMessagingService.PUSH_NOTIFICATION_ACTION -> "push notification"
+			else -> "unknown"
+		}
+		logger.i("onPushMessageReceived()", "${actionString} received:")
+		data.forEach { (key, value) -> logger.i(" - ", "$key = $value") }
 	}
 
 	override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -254,6 +597,7 @@ class MainActivity : AppCompatActivity() {
 
 	override fun onOptionsItemSelected(item: MenuItem): Boolean {
 		return when(item.itemId) {
+			R.id.action_run_test -> runPushTests()
 			R.id.action_activate_push -> activatePush()
 			R.id.action_realtime_subscribe -> realtimeSubscribe()
 			R.id.action_realtime_publish -> realtimePublish()
