@@ -2,6 +2,13 @@
 
 This is a simple interactive app that exercises the use of the Ably push client API in an Android app.
 
+### Dependencies
+
+This uses the ably-java library. As there is no push-enabled release yet, this project references ably-java as a project dependency.
+This will later be updated to use a released version. In the meantime, check out the `integration-push` branch of the Ably
+library (https://github.com/ably/ably-java/tree/integration-push)
+and use that as the dependency of this app.
+
 ### Interactive actions
 
 Several operations can be triggered interactively via the menu. The operations are:
