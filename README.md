@@ -4,10 +4,8 @@ This is a simple interactive app that exercises the use of the Ably push client 
 
 ### Dependencies
 
-This uses the ably-java library. As there is no push-enabled release yet, this project references ably-java as a project dependency.
-This will later be updated to use a released version. In the meantime, check out the `integration-push` branch of the Ably
-library (https://github.com/ably/ably-java/tree/integration-push)
-and use that as the dependency of this app.
+This uses the ably-java library, and is configured to use a pre-release of the 1.1 library including push support.
+This will be updated to a stable 1.1 release once one is available.
 
 ### Interactive actions
 
