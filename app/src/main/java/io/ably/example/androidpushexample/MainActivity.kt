@@ -6,22 +6,24 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.widget.Toolbar
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.support.v7.widget.Toolbar
 import android.widget.TextView
 import com.google.firebase.iid.FirebaseInstanceId
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import io.ably.lib.realtime.*
+import io.ably.lib.rest.Auth
+import io.ably.lib.rest.Auth.TokenCallback
 import io.ably.lib.types.*
-import java.util.HashMap
+import java.util.*
 
 const val TAG = "androidpushexample"
 
 class MainActivity : AppCompatActivity() {
-	val apiKey = "EHuTJg.KaTlBw:iNakMp56GDDlNwvk"
+	val apiKey = "3VTWkw.JhybPw:-cCsEENz65Gx6mN0"
 	val environment = "sandbox"
 
 	var runId = ""
@@ -161,10 +163,11 @@ class MainActivity : AppCompatActivity() {
 	 */
 	fun initAbly():Boolean {
 		val options = ClientOptions(apiKey)
-		options.environment = environment
+		//options.environment = environment
 		options.logLevel = io.ably.lib.util.Log.VERBOSE
 		client = AblyRealtime(options)
 
+		options.authCallback = TokenCallback { it: Auth.TokenParams? -> };
 		/* this is necessary before the client can perform any operations that depend on
 		 * an Android context, such as making the necessary platform operations for push */
 		client.setAndroidContext(this)

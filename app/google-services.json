@@ -1,27 +1,27 @@
 {
   "project_info": {
-    "project_number": "454875318291",
-    "firebase_url": "https://ably-push-example-469ea.firebaseio.com",
-    "project_id": "ably-push-example-469ea",
-    "storage_bucket": "ably-push-example-469ea.appspot.com"
+    "project_number": "951256225643",
+    "firebase_url": "https://ablypushtutorial.firebaseio.com",
+    "project_id": "ablypushtutorial",
+    "storage_bucket": "ablypushtutorial.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:454875318291:android:ce5e97f856c2f898",
+        "mobilesdk_app_id": "1:951256225643:android:ce5e97f856c2f898",
         "android_client_info": {
           "package_name": "io.ably.example.androidpushexample"
         }
       },
       "oauth_client": [
         {
-          "client_id": "454875318291-14m22k16vjjqh1ipdhnge04bpknqa9td.apps.googleusercontent.com",
+          "client_id": "951256225643-nrccq445ej62uleal5rouo58dc3rhkb8.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBGpoq9X0IDcamvf9T3Vvhgz-jp9VG9AJQ"
+          "current_key": "AIzaSyCpBJ-MAE9LVFXCcJHymwamMbo3lmEBFpY"
         }
       ],
       "services": {

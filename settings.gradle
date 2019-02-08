@@ -1,3 +1,1 @@
 include ':app'
-include 'ably-android'
-project(':ably-android').projectDir = new File('/Users/paddy/data/work/dev/ably-java/android')
