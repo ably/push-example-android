@@ -23,6 +23,10 @@ import java.util.*
 const val TAG = "androidpushexample"
 
 class MainActivity : AppCompatActivity() {
+	/**
+	 * API Key and Environment values are read from local.properties. Check build.gradle for more
+	 * details
+	 */
 	val apiKey = BuildConfig.ABLY_KEY
 	val environment = BuildConfig.ABLY_ENV
 
