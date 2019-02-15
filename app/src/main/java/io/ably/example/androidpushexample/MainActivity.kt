@@ -23,8 +23,8 @@ import java.util.*
 const val TAG = "androidpushexample"
 
 class MainActivity : AppCompatActivity() {
-	val apiKey = "3VTWkw.JhybPw:-cCsEENz65Gx6mN0"
-	val environment = "sandbox"
+	val apiKey = BuildConfig.ABLY_KEY
+	val environment = BuildConfig.ABLY_ENV
 
 	var runId = ""
 	var channelName = ""
