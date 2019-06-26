@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.provider.Settings
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
 import android.util.Log
@@ -15,6 +16,7 @@ import com.google.firebase.iid.FirebaseInstanceId
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import io.ably.lib.realtime.*
+import io.ably.lib.rest.AblyRest
 import io.ably.lib.rest.Auth
 import io.ably.lib.rest.Auth.TokenCallback
 import io.ably.lib.types.*
@@ -167,11 +169,18 @@ class MainActivity : AppCompatActivity() {
 	 */
 	fun initAbly():Boolean {
 		val options = ClientOptions(apiKey)
-		//options.environment = environment
+		options.environment = environment
 		options.logLevel = io.ably.lib.util.Log.VERBOSE
+        options.clientId = clientId()
 		client = AblyRealtime(options)
 
-		options.authCallback = TokenCallback { it: Auth.TokenParams? -> };
+		val rest = AblyRest(ClientOptions(apiKey))
+
+		options.authCallback = object: TokenCallback {
+            override fun getTokenRequest(params: Auth.TokenParams?): Any {
+                return rest.auth.requestToken(params, null)
+            }
+        }
 		/* this is necessary before the client can perform any operations that depend on
 		 * an Android context, such as making the necessary platform operations for push */
 		client.setAndroidContext(this)
@@ -192,6 +201,10 @@ class MainActivity : AppCompatActivity() {
 		})
 		return true
 	}
+
+    fun clientId(): String{
+        return Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID)
+    }
 
 	/**
 	 * Close the Ably connection. This removes any push channel subscription
@@ -551,6 +564,72 @@ class MainActivity : AppCompatActivity() {
 		return true;
 	}
 
+    /**
+     * Subscribe this device for push messages on the channel
+     */
+    fun pushSubscribeClient(testChannelName: String = channelName, wait: Boolean = true): Boolean {
+        logger.i("pushSubscribeClient()", "push subscribing to channel")
+        val channel = client.channels.get(testChannelName)
+        val waiter = Object()
+        var error: ErrorInfo? = null
+        synchronized(waiter) {
+            channel.push.subscribeClientAsync(object : CompletionListener {
+                override fun onSuccess() {
+                    logger.i("pushSubscribeClient()", "subscribe success using clientId: " + clientId())
+                    synchronized(waiter) { waiter.notify() }
+                }
+
+                override fun onError(reason: ErrorInfo?) {
+                    logger.e("pushSubscribeClient()", "failed: err: " + reason!!.message)
+                    synchronized(waiter) { error = reason; waiter.notify() }
+                }
+            })
+            if (wait) {
+                logger.i("pushSubscribeClient()", "waiting for push subscription to channel ..")
+                waiter.wait()
+                logger.i("pushSubscribeClient()", ".. push subscription complete")
+            }
+        }
+        if (error != null) {
+            throw AblyException.fromErrorInfo(error)
+        }
+        return true
+    }
+
+    /**
+     * Unsubscribe this device from push messages on the channel
+     */
+    fun pushUnsubscribeClient(testChannelName: String = channelName, wait: Boolean = true): Boolean {
+        logger.i("pushUnsubscribeClient()", "push unsubscribing from channel")
+        val channel = client.channels.get(testChannelName)
+
+        val waiter = Object()
+        var error: ErrorInfo? = null
+        synchronized(waiter) {
+            val listener: CompletionListener? = if (wait) object : CompletionListener {
+                override fun onSuccess() {
+                    logger.i("pushUnsubscribeClient()", "unsubscribe success")
+                    synchronized(waiter) { waiter.notify() }
+                }
+
+                override fun onError(reason: ErrorInfo?) {
+                    logger.e("pushUnsubscribeClient()", "failed: err: " + reason!!.message)
+                    synchronized(waiter) { error = reason; waiter.notify() }
+                }
+            } else null
+            channel.push.unsubscribeClientAsync(listener)
+            if (wait) {
+                logger.i("pushUnsubscribeClient()", "waiting for push subscription to channel ..")
+                waiter.wait()
+                logger.i("pushUnsubscribeClient()", ".. push subscription complete")
+            }
+        }
+        if (error != null) {
+            throw AblyException.fromErrorInfo(error)
+        }
+        return true
+    }
+
 	/**
 	 * Get details of the LocalDevice
 	 */
@@ -620,6 +699,8 @@ class MainActivity : AppCompatActivity() {
 			R.id.action_reset_local_device -> resetLocalDevice()
 			R.id.action_get_activation_state -> getActivationState()
 			R.id.action_reset_activation_state -> resetActivationState()
+            R.id.action_push_subscribe_client -> pushSubscribeClient()
+            R.id.action_push_unsubscribe_client -> pushUnsubscribeClient()
 			else -> super.onOptionsItemSelected(item)
 		}
 	}

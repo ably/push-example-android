@@ -24,19 +24,31 @@
     />
     <item
             android:id="@+id/action_push_subscribe"
-            android:title="Subscribe to push channel"
+            android:title="Subscribe to push channel (DeviceId)"
             app:showAsAction="ifRoom"
     />
     <item
             android:id="@+id/action_push_unsubscribe"
-            android:title="Unsubscribe to push channel"
+            android:title="Unsubscribe to push channel (DeviceId)"
             app:showAsAction="ifRoom"
     />
     <item
-            android:id="@+id/action_push_publish_data"
-            android:title="Publish data to push channel"
-            app:showAsAction="ifRoom"
-    />
+        android:id="@+id/action_push_publish_data"
+        android:title="Publish data to push channel (DeviceId)"
+        app:showAsAction="ifRoom"
+        />
+
+    <item
+        android:id="@+id/action_push_subscribe_client"
+        android:title="Subscribe to push channel (ClientId)"
+        app:showAsAction="ifRoom"
+        />
+    <item
+        android:id="@+id/action_push_unsubscribe_client"
+        android:title="Unsubscribe to push channel (ClientId)"
+        app:showAsAction="ifRoom"
+        />
+
     <item
             android:id="@+id/action_push_publish_notification"
             android:title="Publish notification to push channel"
