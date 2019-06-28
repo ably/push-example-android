@@ -23,6 +23,8 @@ import io.ably.lib.types.*
 import java.util.*
 
 const val TAG = "androidpushexample"
+const val CLIENT_ID_SUBSCRIPTION: Int = 1
+const val DEVICE_ID_SUBSCRIPTION: Int = 2
 
 class MainActivity : AppCompatActivity() {
 	/**
@@ -34,6 +36,7 @@ class MainActivity : AppCompatActivity() {
 
 	var runId = ""
 	var channelName = ""
+	var subscriptionType = 0
 
 	lateinit var client: AblyRealtime
 	lateinit var textView: TextView
@@ -311,6 +314,10 @@ class MainActivity : AppCompatActivity() {
 	 * Subscribe this device for push messages on the channel
 	 */
 	fun pushSubscribe(testChannelName:String = channelName, wait:Boolean = true):Boolean {
+        if (subscriptionType == CLIENT_ID_SUBSCRIPTION) {
+            logger.i("pushSubscribe()", "Unsubscribing the clientId subscription first")
+            pushUnsubscribeClient()
+        }
         logger.i("pushSubscribe()", "push subscribing to channel")
 		val channel = client.channels.get(testChannelName)
 		val waiter = Object()
@@ -318,6 +325,7 @@ class MainActivity : AppCompatActivity() {
 		synchronized(waiter) {
 			channel.push.subscribeDeviceAsync(object: CompletionListener {
 				override fun onSuccess() {
+					subscriptionType = DEVICE_ID_SUBSCRIPTION
 					logger.i("pushSubscribe()", "subscribe success")
 					synchronized(waiter) {waiter.notify()}
 				}
@@ -360,9 +368,9 @@ class MainActivity : AppCompatActivity() {
 			} else null
 			channel.push.unsubscribeDeviceAsync(listener)
 			if(wait) {
-				logger.i("pushSubscribe()", "waiting for push subscription to channel ..")
+				logger.i("pushSubscribe()", "waiting to unsubscribe from channel ..")
 				waiter.wait()
-				logger.i("pushSubscribe()", ".. push subscription complete")
+				logger.i("pushSubscribe()", ".. unsubscribe complete")
 			}
 		}
 		if(error != null) {
@@ -568,6 +576,11 @@ class MainActivity : AppCompatActivity() {
      * Subscribe this device for push messages on the channel
      */
     fun pushSubscribeClient(testChannelName: String = channelName, wait: Boolean = true): Boolean {
+        if (subscriptionType == DEVICE_ID_SUBSCRIPTION) {
+            logger.i("pushSubscribeClient()", "Unsubscribing channel that was subscribed using " +
+                    "deviceId")
+            pushUnsubscribe()
+        }
         logger.i("pushSubscribeClient()", "push subscribing to channel")
         val channel = client.channels.get(testChannelName)
         val waiter = Object()
@@ -576,6 +589,7 @@ class MainActivity : AppCompatActivity() {
             channel.push.subscribeClientAsync(object : CompletionListener {
                 override fun onSuccess() {
                     logger.i("pushSubscribeClient()", "subscribe success using clientId: " + clientId())
+                    subscriptionType = CLIENT_ID_SUBSCRIPTION
                     synchronized(waiter) { waiter.notify() }
                 }
 
@@ -619,9 +633,9 @@ class MainActivity : AppCompatActivity() {
             } else null
             channel.push.unsubscribeClientAsync(listener)
             if (wait) {
-                logger.i("pushUnsubscribeClient()", "waiting for push subscription to channel ..")
+                logger.i("pushUnsubscribeClient()", "waiting to unsubscribe from channel ..")
                 waiter.wait()
-                logger.i("pushUnsubscribeClient()", ".. push subscription complete")
+                logger.i("pushUnsubscribeClient()", ".. unsubscribe complete")
             }
         }
         if (error != null) {

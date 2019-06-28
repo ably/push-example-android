@@ -32,11 +32,6 @@
             android:title="Unsubscribe to push channel (DeviceId)"
             app:showAsAction="ifRoom"
     />
-    <item
-        android:id="@+id/action_push_publish_data"
-        android:title="Publish data to push channel (DeviceId)"
-        app:showAsAction="ifRoom"
-        />
 
     <item
         android:id="@+id/action_push_subscribe_client"
@@ -48,7 +43,11 @@
         android:title="Unsubscribe to push channel (ClientId)"
         app:showAsAction="ifRoom"
         />
-
+    <item
+        android:id="@+id/action_push_publish_data"
+        android:title="Publish data to push channel"
+        app:showAsAction="ifRoom"
+        />
     <item
             android:id="@+id/action_push_publish_notification"
             android:title="Publish notification to push channel"

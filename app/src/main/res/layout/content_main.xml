@@ -6,7 +6,7 @@
     tools:context="io.ably.example.androidpushexample.MainActivity"
     tools:showIn="@layout/activity_main">
 
-    <EditText
+    <TextView
         android:id="@+id/editText1"
         android:layout_width="match_parent"
         android:layout_height="602dp"
@@ -16,5 +16,5 @@
         android:gravity="top"
         android:inputType="textMultiLine|textNoSuggestions">
 
-    </EditText>
+    </TextView>
 </RelativeLayout>
