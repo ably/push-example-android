@@ -3,6 +3,7 @@ package io.ably.example.androidpushexample;
 import android.content.Intent;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+import io.ably.lib.push.AblyFirebaseInstanceIdService;
 import io.ably.lib.util.Log;
 
 import java.util.HashMap;
@@ -11,6 +12,11 @@ import java.util.Map;
 public class AblyPushMessagingService extends FirebaseMessagingService {
 	public static final String PUSH_DATA_ACTION = "io.ably.example.androidpushexample.PUSH_DATA_MESSAGE";
 	public static final String PUSH_NOTIFICATION_ACTION = "io.ably.example.androidpushexample.PUSH_NOTIFICATION_MESSAGE";
+
+	@Override
+	public void onNewToken(String token) {
+		AblyFirebaseInstanceIdService.onNewRegistrationToken(this, token);
+	}
 
 	@Override
 	public void onMessageReceived (RemoteMessage message) {

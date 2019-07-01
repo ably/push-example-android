@@ -42,6 +42,7 @@ class MainActivity : AppCompatActivity() {
 	lateinit var textView: TextView
 	lateinit var logger: TextViewLogger
 	lateinit var pushMessageReceiver: PushReceiver
+	lateinit var pushActivateReceiver: ActivateReceiver
 
 	inner class PushReceiver : BroadcastReceiver() {
 		private val lock:Object = Object()
@@ -61,6 +62,12 @@ class MainActivity : AppCompatActivity() {
 			while(action != this.action || runId != this.runId) {
 				lock.wait()
 			}
+		}
+	}
+
+	inner class ActivateReceiver : BroadcastReceiver() {
+		override fun onReceive(context: Context?, intent: Intent?) {
+			logger.i("activatePush()", ".. activated push system")
 		}
 	}
 
@@ -85,22 +92,31 @@ class MainActivity : AppCompatActivity() {
 		logger = TextViewLogger(textView);
 
 		generateRunId()
-		registerReceiver()
+		registerPushReceiver()
+		registerActivateReceiver()
 		initAbly()
 	}
 
 	override fun onDestroy() {
 		unregisterReceiver(pushMessageReceiver)
+		unregisterReceiver(pushActivateReceiver)
 		closeAbly()
 		super.onDestroy()
 	}
 
-	fun registerReceiver() {
+	fun registerPushReceiver() {
 		pushMessageReceiver = PushReceiver()
 		val intentFilter = IntentFilter()
 		intentFilter.addAction(AblyPushMessagingService.PUSH_DATA_ACTION)
 		intentFilter.addAction(AblyPushMessagingService.PUSH_NOTIFICATION_ACTION)
 		registerReceiver(pushMessageReceiver, intentFilter)
+	}
+
+	fun registerActivateReceiver() {
+		pushActivateReceiver = ActivateReceiver()
+		val intentFilter = IntentFilter()
+		intentFilter.addAction("io.ably.broadcast.PUSH_ACTIVATE")
+		registerReceiver(pushActivateReceiver, intentFilter)
 	}
 
 	fun runPushTests():Boolean {
@@ -242,7 +258,6 @@ class MainActivity : AppCompatActivity() {
 			/* FIXME: wait for actual state change */
 			Thread.sleep(4000)
 		}
-		logger.i("activatePush()", ".. activated push system")
 		return true
 	}
 

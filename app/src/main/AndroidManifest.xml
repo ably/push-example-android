@@ -8,7 +8,8 @@
             android:label="@string/app_name"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
-            android:theme="@style/AppTheme" android:networkSecurityConfig="@xml/network_security_config">
+            android:theme="@style/AppTheme"
+            android:networkSecurityConfig="@xml/network_security_config">
         <activity
                 android:name=".MainActivity"
                 android:label="@string/app_name"
@@ -22,12 +23,6 @@
                 android:name=".AblyPushMessagingService">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
-        <service
-                android:name=".AblyPushRegistrationService">
-            <intent-filter>
-                <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
             </intent-filter>
         </service>
     </application>
