@@ -305,7 +305,7 @@ class MainActivity : AppCompatActivity() {
 //					Thread.sleep(4000)
 						pushActivateReceiver.waitFor("io.ably.broadcast.PUSH_DEACTIVATE")
 					}
-					logger.i("activatePush()", ".. deactivated push system")
+					logger.i("deactivatePush()", ".. deactivated push system")
 				}
 			}
 		}.start()
