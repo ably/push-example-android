@@ -13,6 +13,11 @@
             app:showAsAction="always|withText"
     />
     <item
+            android:id="@+id/action_deactivate_push"
+            android:title="Deactivate push"
+            app:showAsAction="always|withText"
+    />
+    <item
             android:id="@+id/action_realtime_subscribe"
             android:title="Subscribe to channel"
             app:showAsAction="ifRoom"
