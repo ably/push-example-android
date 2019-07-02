@@ -39,7 +39,8 @@ class MainActivity : AppCompatActivity() {
 	var channelName = ""
 	var subscriptionType = 0
 
-	lateinit var client: AblyRealtime
+	lateinit var ablyForDevice: AblyRealtime
+	lateinit var ablyForAdmin: AblyRest
 	lateinit var textView: TextView
 	lateinit var logger: TextViewLogger
 	lateinit var pushMessageReceiver: PushReceiver
@@ -205,26 +206,33 @@ class MainActivity : AppCompatActivity() {
 	 * Initialise the Ably library and connect
 	 */
 	fun initAbly():Boolean {
-		val options = ClientOptions(apiKey)
-		options.environment = environment
-		options.logLevel = io.ably.lib.util.Log.VERBOSE
-        options.clientId = clientId()
-		client = AblyRealtime(options)
+		val adminOptions = ClientOptions(apiKey)
+		adminOptions.environment = environment
+		adminOptions.logLevel = io.ably.lib.util.Log.VERBOSE
+		ablyForAdmin = AblyRest(adminOptions)
 
-		val rest = AblyRest(ClientOptions(apiKey))
+		val deviceOptions = ClientOptions()
+		deviceOptions.environment = environment
+		deviceOptions.logLevel = io.ably.lib.util.Log.VERBOSE
 
-		options.authCallback = object: TokenCallback {
+		/* ensure that the device client has push-subscribe */
+		deviceOptions.authCallback = object: TokenCallback {
             override fun getTokenRequest(params: Auth.TokenParams?): Any {
-                return rest.auth.requestToken(params, null)
+				val deviceTokenParams = Auth.TokenParams()
+				deviceTokenParams.clientId = clientId()
+				deviceTokenParams.capability = "{\"*\":[\"publish\",\"subscribe\",\"push-subscribe\"]}"
+                return ablyForAdmin.auth.requestToken(deviceTokenParams, null)
             }
         }
-		/* this is necessary before the client can perform any operations that depend on
+		ablyForDevice = AblyRealtime(deviceOptions)
+
+		/* this is necessary before the ablyForDevice can perform any operations that depend on
 		 * an Android context, such as making the necessary platform operations for push */
-		client.setAndroidContext(this)
+		ablyForDevice.setAndroidContext(this)
 		logger.i("initAbly()", "initialised library")
 
 		/* monitor for connection state changes */
-		client.connection.on(object: ConnectionStateListener {
+		ablyForDevice.connection.on(object: ConnectionStateListener {
 			override fun onConnectionStateChanged(state: ConnectionStateListener.ConnectionStateChange?) {
 				when(state!!.current) {
 					ConnectionState.connecting -> logger.w("initAbly()", "connecting")
@@ -255,7 +263,7 @@ class MainActivity : AppCompatActivity() {
 			override fun run() {
 				Thread.sleep(2000)
 				pushUnsubscribe(channelName, true)
-				client.close()
+				ablyForDevice.close()
 			}
 		}.start()
 	}
@@ -275,10 +283,8 @@ class MainActivity : AppCompatActivity() {
 				synchronized(pushActivateReceiver) {
 					/* ensure the Ably library registers any new token with the server */
 					logger.i("activatePush()", "activating push system .. waiting")
-					client.push.activate()
+					ablyForDevice.push.activate()
 					if(wait) {
-//					/* FIXME: wait for actual state change */
-//					Thread.sleep(4000)
 						pushActivateReceiver.waitFor("io.ably.broadcast.PUSH_ACTIVATE")
 					}
 					logger.i("activatePush()", ".. activated push system")
@@ -299,10 +305,8 @@ class MainActivity : AppCompatActivity() {
 				synchronized(pushActivateReceiver) {
 					/* ensure the Ably library registers any new token with the server */
 					logger.i("deactivatePush()", "deactivating push system .. waiting")
-					client.push.deactivate()
+					ablyForDevice.push.deactivate()
 					if(wait) {
-//					/* FIXME: wait for actual state change */
-//					Thread.sleep(4000)
 						pushActivateReceiver.waitFor("io.ably.broadcast.PUSH_DEACTIVATE")
 					}
 					logger.i("deactivatePush()", ".. deactivated push system")
@@ -317,7 +321,7 @@ class MainActivity : AppCompatActivity() {
 	 */
 	fun realtimeSubscribe(testChannelName:String = channelName, wait:Boolean = false):Boolean {
         logger.i("realtimeSubscribe()", "subscribing to channel")
-		val channel = client.channels.get(testChannelName)
+		val channel = ablyForDevice.channels.get(testChannelName)
         channel.on(object:ChannelStateListener {
             override fun onChannelStateChanged(stateChange: ChannelStateListener.ChannelStateChange?) {
                 when(stateChange!!.current) {
@@ -363,7 +367,7 @@ class MainActivity : AppCompatActivity() {
 	 */
 	fun realtimePublish(testChannelName:String = channelName):Boolean {
         logger.i("realtimePublish()", "publishing to channel")
-		val channel = client.channels.get(testChannelName)
+		val channel = ablyForDevice.channels.get(testChannelName)
 		val message = Message("testMessageName", "testMessageData")
 		channel.publish(message, object: CompletionListener {
 			override fun onSuccess() {
@@ -385,7 +389,7 @@ class MainActivity : AppCompatActivity() {
             pushUnsubscribeClient()
         }
         logger.i("pushSubscribe()", "push subscribing to channel")
-		val channel = client.channels.get(testChannelName)
+		val channel = ablyForDevice.channels.get(testChannelName)
 		val waiter = Object()
 		var error:ErrorInfo? = null
 		synchronized(waiter) {
@@ -417,7 +421,7 @@ class MainActivity : AppCompatActivity() {
 	 */
 	fun pushUnsubscribe(testChannelName:String = channelName, wait:Boolean = true):Boolean {
         logger.i("pushUnsubscribe()", "push unsubscribing from channel")
-		val channel = client.channels.get(testChannelName)
+		val channel = ablyForDevice.channels.get(testChannelName)
 
 		val waiter = Object()
 		var error:ErrorInfo? = null
@@ -450,7 +454,7 @@ class MainActivity : AppCompatActivity() {
 	 */
 	fun pushPublishData(testRunId:String = runId, wait:Boolean = false):Boolean {
         logger.i("pushPublishData()", "pushing data message to channel")
-		val channel = client.channels.get(channelName(testRunId))
+		val channel = ablyForDevice.channels.get(channelName(testRunId))
 		val data = JsonObject()
 		data.add("testKey", JsonPrimitive("testValuePublish"))
 		data.add("runId", JsonPrimitive(testRunId))
@@ -490,7 +494,7 @@ class MainActivity : AppCompatActivity() {
 	 */
 	fun pushPublishNotification(testRunId:String = runId, wait:Boolean = false):Boolean {
         logger.i("pushPublishNotification()", "pushing notification message to channel")
-		val channel = client.channels.get(channelName(testRunId))
+		val channel = ablyForDevice.channels.get(channelName(testRunId))
 		val notification = JsonObject()
 		notification.add("title", JsonPrimitive("testNotification"))
 		notification.add("body", JsonPrimitive("Hello from Ably push publish"))
@@ -555,12 +559,12 @@ class MainActivity : AppCompatActivity() {
 		data.add("runId", JsonPrimitive(testRunId))
 		val payload = JsonObject()
 		payload.add("data", data)
-		val deviceId = client.push.getLocalDevice().id
+		val deviceId = ablyForDevice.push.getLocalDevice().id
 
 		val waiter = Object()
 		var error:ErrorInfo? = null
 		synchronized(waiter) {
-			client.push.admin.publishAsync(arrayOf(Param("deviceId", deviceId)), payload, object: CompletionListener {
+			ablyForAdmin.push.admin.publishAsync(arrayOf(Param("deviceId", deviceId)), payload, object: CompletionListener {
 				override fun onSuccess() {
 					logger.i("pushDirectData()", "publish success")
 					synchronized(waiter) {waiter.notify()}
@@ -592,12 +596,12 @@ class MainActivity : AppCompatActivity() {
 		data.add("runId", JsonPrimitive(testRunId))
 		val payload = JsonObject()
 		payload.add("data", data)
-		val clientId = client.push.getLocalDevice().clientId
+		val clientId = ablyForDevice.push.getLocalDevice().clientId
 
 		val waiter = Object()
 		var error:ErrorInfo? = null
 		synchronized(waiter) {
-			client.push.admin.publishAsync(arrayOf(Param("clientId", clientId)), payload, object: CompletionListener {
+			ablyForAdmin.push.admin.publishAsync(arrayOf(Param("clientId", clientId)), payload, object: CompletionListener {
 				override fun onSuccess() {
 					logger.i("pushDirectDataClient()", "publish success")
 					synchronized(waiter) {waiter.notify()}
@@ -632,12 +636,12 @@ class MainActivity : AppCompatActivity() {
 		val data = JsonObject()
 		data.add("runId", JsonPrimitive(testRunId))
 		payload.add("data", data)
-		val deviceId = client.push.getLocalDevice().id
+		val deviceId = ablyForDevice.push.getLocalDevice().id
 
 		val waiter = Object()
 		var error:ErrorInfo? = null
 		synchronized(waiter) {
-			client.push.admin.publishAsync(arrayOf(Param("deviceId", deviceId)), payload, object: CompletionListener {
+			ablyForAdmin.push.admin.publishAsync(arrayOf(Param("deviceId", deviceId)), payload, object: CompletionListener {
 				override fun onSuccess() {
 					logger.i("pushDirectNotification()", "publish success")
 					synchronized(waiter) {waiter.notify()}
@@ -685,7 +689,7 @@ class MainActivity : AppCompatActivity() {
             pushUnsubscribe()
         }
         logger.i("pushSubscribeClient()", "push subscribing to channel")
-        val channel = client.channels.get(testChannelName)
+        val channel = ablyForDevice.channels.get(testChannelName)
         val waiter = Object()
         var error: ErrorInfo? = null
         synchronized(waiter) {
@@ -718,7 +722,7 @@ class MainActivity : AppCompatActivity() {
      */
     fun pushUnsubscribeClient(testChannelName: String = channelName, wait: Boolean = true): Boolean {
         logger.i("pushUnsubscribeClient()", "push unsubscribing from channel")
-        val channel = client.channels.get(testChannelName)
+        val channel = ablyForDevice.channels.get(testChannelName)
 
         val waiter = Object()
         var error: ErrorInfo? = null
@@ -751,7 +755,7 @@ class MainActivity : AppCompatActivity() {
 	 * Get details of the LocalDevice
 	 */
 	fun getLocalDevice():Boolean {
-		val localDevice = client.push.getLocalDevice()
+		val localDevice = ablyForDevice.push.getLocalDevice()
         logger.i("getLocalDevice()", "local device id: ${localDevice.id}")
 		return true
 	}
@@ -761,7 +765,7 @@ class MainActivity : AppCompatActivity() {
 	 */
 	fun resetLocalDevice():Boolean {
         logger.i("resetLocalDevice()", "resetting local device")
-		client.push.getLocalDevice().reset()
+		ablyForDevice.push.getLocalDevice().reset()
 		return true
 	}
 
@@ -769,7 +773,7 @@ class MainActivity : AppCompatActivity() {
 	 * Get the state of the push activation state machine
 	 */
 	fun getActivationState():Boolean {
-		val activationState = client.push.activationContext.getActivationStateMachine().current.javaClass.canonicalName
+		val activationState = ablyForDevice.push.activationContext.getActivationStateMachine().current.javaClass.canonicalName
         logger.i("getActivationState()", "activation state: ${activationState}")
 		return true
 	}
@@ -779,7 +783,7 @@ class MainActivity : AppCompatActivity() {
 	 */
 	fun resetActivationState():Boolean {
         logger.i("resetActivationState()", "resetting activation state")
-		client.push.activationContext.getActivationStateMachine().reset()
+		ablyForDevice.push.activationContext.getActivationStateMachine().reset()
 		return true
 	}
 
