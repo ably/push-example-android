@@ -42,6 +42,7 @@ class MainActivity : AppCompatActivity() {
 	lateinit var textView: TextView
 	lateinit var logger: TextViewLogger
 	lateinit var pushMessageReceiver: PushReceiver
+	lateinit var pushActivateReceiver: ActivateReceiver
 
 	inner class PushReceiver : BroadcastReceiver() {
 		private val lock:Object = Object()
@@ -59,6 +60,31 @@ class MainActivity : AppCompatActivity() {
 
 		fun waitFor(action:String, runId:String) = synchronized(lock) {
 			while(action != this.action || runId != this.runId) {
+				lock.wait()
+			}
+		}
+	}
+
+	inner class ActivateReceiver : BroadcastReceiver() {
+		private val lock:Object = Object()
+		private var action:String = ""
+		private var hasError:Boolean = false
+		private var errorMessage:String = ""
+		override fun onReceive(context: Context?, intent: Intent?) {
+			var action:String = intent!!.action
+			val hasError:Boolean = intent!!.getBooleanExtra("hasError", false)
+			synchronized(lock) {
+				this.action = action
+				this.hasError = hasError
+				if(hasError) {
+					this.errorMessage = intent!!.getStringExtra("error.message")
+				}
+				lock.notifyAll()
+			}
+		}
+
+		fun waitFor(action:String) = synchronized(lock) {
+			while(action != this.action) {
 				lock.wait()
 			}
 		}
@@ -85,22 +111,29 @@ class MainActivity : AppCompatActivity() {
 		logger = TextViewLogger(textView);
 
 		generateRunId()
-		registerReceiver()
+		registerReceivers()
 		initAbly()
 	}
 
 	override fun onDestroy() {
 		unregisterReceiver(pushMessageReceiver)
+		unregisterReceiver(pushActivateReceiver)
 		closeAbly()
 		super.onDestroy()
 	}
 
-	fun registerReceiver() {
+	fun registerReceivers() {
 		pushMessageReceiver = PushReceiver()
-		val intentFilter = IntentFilter()
-		intentFilter.addAction(AblyPushMessagingService.PUSH_DATA_ACTION)
-		intentFilter.addAction(AblyPushMessagingService.PUSH_NOTIFICATION_ACTION)
-		registerReceiver(pushMessageReceiver, intentFilter)
+		val messageIntentFilter = IntentFilter()
+		messageIntentFilter.addAction(AblyPushMessagingService.PUSH_DATA_ACTION)
+		messageIntentFilter.addAction(AblyPushMessagingService.PUSH_NOTIFICATION_ACTION)
+		registerReceiver(pushMessageReceiver, messageIntentFilter)
+
+		pushActivateReceiver = ActivateReceiver()
+		val activateIntentFilter = IntentFilter()
+		activateIntentFilter.addAction("io.ably.broadcast.PUSH_ACTIVATE")
+		activateIntentFilter.addAction("io.ably.broadcast.PUSH_DEACTIVATE")
+		registerReceiver(pushActivateReceiver, activateIntentFilter)
 	}
 
 	fun runPushTests():Boolean {
@@ -232,17 +265,49 @@ class MainActivity : AppCompatActivity() {
 	 * one doesn't already exist, and it is ready to process any token renewal events
 	 * that arise */
 	fun activatePush(wait:Boolean = false):Boolean {
-		/* activate Firebase */
-        logger.i("activatePush()", "initialising Firebase")
-		FirebaseInstanceId.getInstance().getToken()
-		/* ensure the Ably library registers any new token with the server */
-        logger.i("activatePush()", "activating push system .. waiting")
-		client.push.activate()
-		if(wait) {
-			/* FIXME: wait for actual state change */
-			Thread.sleep(4000)
-		}
-		logger.i("activatePush()", ".. activated push system")
+		object:Thread() {
+			override fun run() {
+				/* activate Firebase */
+				logger.i("activatePush()", "initialising Firebase")
+				FirebaseInstanceId.getInstance().getToken()
+
+				synchronized(pushActivateReceiver) {
+					/* ensure the Ably library registers any new token with the server */
+					logger.i("activatePush()", "activating push system .. waiting")
+					client.push.activate()
+					if(wait) {
+//					/* FIXME: wait for actual state change */
+//					Thread.sleep(4000)
+						pushActivateReceiver.waitFor("io.ably.broadcast.PUSH_ACTIVATE")
+					}
+					logger.i("activatePush()", ".. activated push system")
+				}
+			}
+		}.start()
+		return true
+	}
+
+	/**
+	 * Reset the Push setup for this device. This uses the default (local)
+	 * push registrar. This call ensures that the device will create a registration if
+	 * one doesn't already exist, and it is ready to process any token renewal events
+	 * that arise */
+	fun deactivatePush(wait:Boolean = false):Boolean {
+		object:Thread() {
+			override fun run() {
+				synchronized(pushActivateReceiver) {
+					/* ensure the Ably library registers any new token with the server */
+					logger.i("deactivatePush()", "deactivating push system .. waiting")
+					client.push.deactivate()
+					if(wait) {
+//					/* FIXME: wait for actual state change */
+//					Thread.sleep(4000)
+						pushActivateReceiver.waitFor("io.ably.broadcast.PUSH_DEACTIVATE")
+					}
+					logger.i("activatePush()", ".. deactivated push system")
+				}
+			}
+		}.start()
 		return true
 	}
 
@@ -698,7 +763,8 @@ class MainActivity : AppCompatActivity() {
 	override fun onOptionsItemSelected(item: MenuItem): Boolean {
 		return when(item.itemId) {
 			R.id.action_run_test -> runPushTests()
-			R.id.action_activate_push -> activatePush()
+			R.id.action_activate_push -> activatePush(true)
+			R.id.action_deactivate_push -> deactivatePush(true)
 			R.id.action_realtime_subscribe -> realtimeSubscribe()
 			R.id.action_realtime_publish -> realtimePublish()
 			R.id.action_push_subscribe -> pushSubscribe()
