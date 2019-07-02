@@ -79,6 +79,11 @@
             app:showAsAction="ifRoom"
     />
     <item
+            android:id="@+id/action_push_direct_data_client"
+            android:title="Publish data to push clientId"
+            app:showAsAction="ifRoom"
+    />
+    <item
             android:id="@+id/action_get_local_device"
             android:title="Get local device state"
             app:showAsAction="ifRoom"
