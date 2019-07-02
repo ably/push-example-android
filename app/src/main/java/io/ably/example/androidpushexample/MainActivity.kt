@@ -6,12 +6,13 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
 import android.provider.Settings
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.iid.FirebaseInstanceId
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
@@ -116,8 +117,8 @@ class MainActivity : AppCompatActivity() {
 	}
 
 	override fun onDestroy() {
-		unregisterReceiver(pushMessageReceiver)
-		unregisterReceiver(pushActivateReceiver)
+		LocalBroadcastManager.getInstance(this).unregisterReceiver(pushMessageReceiver)
+		LocalBroadcastManager.getInstance(this).unregisterReceiver(pushActivateReceiver)
 		closeAbly()
 		super.onDestroy()
 	}
@@ -127,13 +128,13 @@ class MainActivity : AppCompatActivity() {
 		val messageIntentFilter = IntentFilter()
 		messageIntentFilter.addAction(AblyPushMessagingService.PUSH_DATA_ACTION)
 		messageIntentFilter.addAction(AblyPushMessagingService.PUSH_NOTIFICATION_ACTION)
-		registerReceiver(pushMessageReceiver, messageIntentFilter)
+		LocalBroadcastManager.getInstance(this).registerReceiver(pushMessageReceiver, messageIntentFilter)
 
 		pushActivateReceiver = ActivateReceiver()
 		val activateIntentFilter = IntentFilter()
 		activateIntentFilter.addAction("io.ably.broadcast.PUSH_ACTIVATE")
 		activateIntentFilter.addAction("io.ably.broadcast.PUSH_DEACTIVATE")
-		registerReceiver(pushActivateReceiver, activateIntentFilter)
+		LocalBroadcastManager.getInstance(this).registerReceiver(pushActivateReceiver, activateIntentFilter)
 	}
 
 	fun runPushTests():Boolean {
