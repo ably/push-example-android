@@ -582,6 +582,43 @@ class MainActivity : AppCompatActivity() {
 	}
 
 	/**
+	 * Send a message containing push data directly to devices with a specified clientId
+	 */
+	fun pushDirectDataClient(testRunId:String = runId, wait:Boolean = false):Boolean {
+		logger.i("pushDirectData()", "pushing data message direct to clientId")
+		val data = JsonObject()
+		data.add("testKey", JsonPrimitive("testValueDirect"))
+		data.add("runId", JsonPrimitive(testRunId))
+		val payload = JsonObject()
+		payload.add("data", data)
+		val clientId = client.push.getLocalDevice().clientId
+
+		val waiter = Object()
+		var error:ErrorInfo? = null
+		synchronized(waiter) {
+			client.push.admin.publishAsync(arrayOf(Param("clientId", clientId)), payload, object: CompletionListener {
+				override fun onSuccess() {
+					logger.i("pushDirectDataClient()", "publish success")
+					synchronized(waiter) {waiter.notify()}
+				}
+				override fun onError(reason: ErrorInfo?) {
+					logger.e("pushDirectDataClient()", "failed: err: " + reason!!.message)
+					synchronized(waiter) {error = reason; waiter.notify()}
+				}
+			})
+			if (wait) {
+				logger.i("pushDirectDataClient()", "waiting for push direct to clientId publish ..")
+				waiter.wait()
+				logger.i("pushDirectDataClient()", ".. push publish complete")
+			}
+		}
+		if(error != null) {
+			throw AblyException.fromErrorInfo(error)
+		}
+		return true
+	}
+
+	/**
 	 * Send a message directly to the device containing a push notification
 	 */
 	fun pushDirectNotification(testRunId:String = runId, wait:Boolean = false):Boolean {
@@ -775,6 +812,7 @@ class MainActivity : AppCompatActivity() {
 			R.id.action_push_direct_data -> pushDirectData()
 			R.id.action_push_direct_notification -> pushDirectNotification()
 			R.id.action_push_direct_notification_bg -> pushDirectNotificationBackground()
+			R.id.action_push_direct_data_client -> pushDirectDataClient()
 			R.id.action_get_local_device -> getLocalDevice()
 			R.id.action_reset_local_device -> resetLocalDevice()
 			R.id.action_get_activation_state -> getActivationState()
