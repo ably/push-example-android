@@ -49,7 +49,6 @@ You can clone and modify this app and use it to build your own push-enabled app,
 - change the package id;
 - re-namespace the code to reflect the package namespace;
 - obtain a Firebase account, and register your app's package id with Firebase;
-- download `google-services.json` and add that to the app in place of the existing file
-- obtain an Ably API key;
-- add the Ably API key to the app in place of the existing API key;
+- download `google-services.json` and add that to the app directory
+- obtain an Ably API key and configure; see the `BuildConfig` fields in `app/build.gradle`
 - configure the app's Firebase server key as the `fcmKey` in the Ably app
