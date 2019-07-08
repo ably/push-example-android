@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -804,9 +805,6 @@ class MainActivity : AppCompatActivity() {
 
 	override fun onOptionsItemSelected(item: MenuItem): Boolean {
 		return when(item.itemId) {
-			R.id.action_run_test -> runPushTests()
-			R.id.action_activate_push -> activatePush(true)
-			R.id.action_deactivate_push -> deactivatePush(true)
 			R.id.action_realtime_subscribe -> realtimeSubscribe()
 			R.id.action_realtime_publish -> realtimePublish()
 			R.id.action_push_subscribe -> pushSubscribe()
@@ -827,4 +825,13 @@ class MainActivity : AppCompatActivity() {
 			else -> super.onOptionsItemSelected(item)
 		}
 	}
+
+    fun uiButtonClick(view: View) {
+        when (view.id) {
+            R.id.runTestBtn -> runPushTests()
+            R.id.activatePushBtn -> activatePush(true)
+            R.id.deactivatePushBtn -> deactivatePush(true)
+        }
+        return
+    }
 }

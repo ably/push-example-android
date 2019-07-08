@@ -2,105 +2,91 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     >
-    <item
-            android:id="@+id/action_run_test"
-            android:title="Run test"
-            app:showAsAction="always|withText"
-    />
-    <item
-            android:id="@+id/action_activate_push"
-            android:title="Activate push"
-            app:showAsAction="always|withText"
-    />
-    <item
-            android:id="@+id/action_deactivate_push"
-            android:title="Deactivate push"
-            app:showAsAction="always|withText"
-    />
+
     <item
             android:id="@+id/action_realtime_subscribe"
             android:title="Subscribe to channel"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_realtime_publish"
             android:title="Publish to channel"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_push_subscribe"
             android:title="Subscribe to push channel (DeviceId)"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_push_unsubscribe"
             android:title="Unsubscribe to push channel (DeviceId)"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
 
     <item
         android:id="@+id/action_push_subscribe_client"
         android:title="Subscribe to push channel (ClientId)"
-        app:showAsAction="ifRoom"
+        app:showAsAction="never"
         />
     <item
         android:id="@+id/action_push_unsubscribe_client"
         android:title="Unsubscribe to push channel (ClientId)"
-        app:showAsAction="ifRoom"
+        app:showAsAction="never"
         />
     <item
         android:id="@+id/action_push_publish_data"
         android:title="Publish data to push channel"
-        app:showAsAction="ifRoom"
+        app:showAsAction="never"
         />
     <item
             android:id="@+id/action_push_publish_notification"
             android:title="Publish notification to push channel"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_push_publish_notification_bg"
             android:title="Publish notification to push channel from background"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_push_direct_data"
             android:title="Publish data to push device"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_push_direct_notification"
             android:title="Publish notification to push device"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_push_direct_notification_bg"
             android:title="Publish notification to push device from background"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_push_direct_data_client"
             android:title="Publish data to push clientId"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_get_local_device"
             android:title="Get local device state"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_reset_local_device"
             android:title="Reset local device state"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_get_activation_state"
             android:title="Get activation state"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
     <item
             android:id="@+id/action_reset_activation_state"
             android:title="Reset activation state"
-            app:showAsAction="ifRoom"
+            app:showAsAction="never"
     />
 </menu>
