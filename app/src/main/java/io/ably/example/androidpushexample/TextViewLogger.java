@@ -8,6 +8,9 @@ import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.widget.TextView;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class TextViewLogger implements Logger {
 
 	private TextView textView;
@@ -39,7 +42,7 @@ public class TextViewLogger implements Logger {
 	}
 
 	private void updateDirect(int color, String tag, String msg, Throwable tr) {
-		String compositeText = tag + ((msg == null) ? "" : ": " + msg) + '\n';
+		String compositeText = SimpleDateFormat.getTimeInstance().format(new Date()) + " " + tag + ((msg == null) ? "" : ": " + msg) + '\n';
 		if(tr != null) {
 			compositeText += tr.getClass().getName() + ": " + tr.getLocalizedMessage() + '\n';
 		}
