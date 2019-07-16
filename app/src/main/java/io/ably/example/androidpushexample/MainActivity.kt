@@ -260,10 +260,16 @@ class MainActivity : AppCompatActivity() {
 	}
 
 	fun regenerateClientId():Boolean {
+		pushUnsubscribeClient()
 		PreferenceManager.getDefaultSharedPreferences(this).edit().remove("clientId").apply()
 		var intent = Intent(this, MainActivity::class.java)
 		intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 		startActivity(intent)
+		return true
+	}
+
+	fun printClientId():Boolean {
+		logger.i("printClientId()", "Client ID: " + clientId())
 		return true
 	}
 
@@ -838,6 +844,7 @@ class MainActivity : AppCompatActivity() {
 			R.id.action_push_subscribe_client -> pushSubscribeClient()
 			R.id.action_push_unsubscribe_client -> pushUnsubscribeClient()
 			R.id.action_regenerate_client_id -> regenerateClientId()
+			R.id.action_get_client_id -> printClientId()
 			else -> super.onOptionsItemSelected(item)
 		}
 	}

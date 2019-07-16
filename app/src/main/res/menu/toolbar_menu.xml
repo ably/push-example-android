@@ -13,6 +13,13 @@
             android:title="Publish to channel"
             app:showAsAction="never"
     />
+
+    <item
+        android:id="@+id/action_get_client_id"
+        android:title="View ClientId"
+        app:showAsAction="never"
+    />
+
     <item
             android:id="@+id/action_push_subscribe"
             android:title="Subscribe to push channel (DeviceId)"
@@ -94,4 +101,5 @@
         android:title="Regenerate ClientId"
         app:showAsAction="never"
         />
+
 </menu>
