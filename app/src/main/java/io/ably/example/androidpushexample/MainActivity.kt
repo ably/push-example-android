@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.provider.Settings
 import android.util.Log
 import android.view.Menu
@@ -248,9 +249,23 @@ class MainActivity : AppCompatActivity() {
 		return true
 	}
 
-    fun clientId(): String{
-        return Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID)
-    }
+	fun clientId():String {
+		var pref = PreferenceManager.getDefaultSharedPreferences(this)
+		if (pref.contains("clientId")) {
+			return pref.getString("clientId", Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID))
+		}
+		var clientId = java.util.UUID.randomUUID().toString()
+		pref.edit().putString("clientId", clientId).apply()
+		return clientId
+	}
+
+	fun regenerateClientId():Boolean {
+		PreferenceManager.getDefaultSharedPreferences(this).edit().remove("clientId").apply()
+		var intent = Intent(this, MainActivity::class.java)
+		intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+		startActivity(intent)
+		return true
+	}
 
 	/**
 	 * Close the Ably connection. This removes any push channel subscription
@@ -820,8 +835,9 @@ class MainActivity : AppCompatActivity() {
 			R.id.action_reset_local_device -> resetLocalDevice()
 			R.id.action_get_activation_state -> getActivationState()
 			R.id.action_reset_activation_state -> resetActivationState()
-            R.id.action_push_subscribe_client -> pushSubscribeClient()
-            R.id.action_push_unsubscribe_client -> pushUnsubscribeClient()
+			R.id.action_push_subscribe_client -> pushSubscribeClient()
+			R.id.action_push_unsubscribe_client -> pushUnsubscribeClient()
+			R.id.action_regenerate_client_id -> regenerateClientId()
 			else -> super.onOptionsItemSelected(item)
 		}
 	}
