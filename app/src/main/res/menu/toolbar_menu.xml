@@ -89,4 +89,9 @@
             android:title="Reset activation state"
             app:showAsAction="never"
     />
+    <item
+        android:id="@+id/action_regenerate_client_id"
+        android:title="Regenerate ClientId"
+        app:showAsAction="never"
+        />
 </menu>
