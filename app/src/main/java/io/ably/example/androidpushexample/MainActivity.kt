@@ -167,8 +167,8 @@ class MainActivity : AppCompatActivity() {
 					pushUnsubscribe(testChannelName, true)
 
 					logger.i("runPushTests()", "Finished")
-				} catch (e: AblyException){
-					logger.e("Exception", "",e)
+				} catch (e: AblyException) {
+					logger.e("Exception", "", e)
 				}
 			}
 		}.start()
@@ -828,44 +828,44 @@ class MainActivity : AppCompatActivity() {
 	}
 
 	override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        try {
-            return when (item.itemId) {
-                R.id.action_realtime_subscribe -> realtimeSubscribe()
-                R.id.action_realtime_publish -> realtimePublish()
-                R.id.action_push_subscribe -> pushSubscribe()
-                R.id.action_push_unsubscribe -> pushUnsubscribe()
-                R.id.action_push_publish_data -> pushPublishData()
-                R.id.action_push_publish_notification -> pushPublishNotification()
-                R.id.action_push_publish_notification_bg -> pushPublishNotificationBackground()
-                R.id.action_push_direct_data -> pushDirectData()
-                R.id.action_push_direct_notification -> pushDirectNotification()
-                R.id.action_push_direct_notification_bg -> pushDirectNotificationBackground()
-                R.id.action_push_direct_data_client -> pushDirectDataClient()
-                R.id.action_get_local_device -> getLocalDevice()
-                R.id.action_reset_local_device -> resetLocalDevice()
-                R.id.action_get_activation_state -> getActivationState()
-                R.id.action_reset_activation_state -> resetActivationState()
-                R.id.action_push_subscribe_client -> pushSubscribeClient()
-                R.id.action_push_unsubscribe_client -> pushUnsubscribeClient()
+		try {
+			return when (item.itemId) {
+				R.id.action_realtime_subscribe -> realtimeSubscribe()
+				R.id.action_realtime_publish -> realtimePublish()
+				R.id.action_push_subscribe -> pushSubscribe()
+				R.id.action_push_unsubscribe -> pushUnsubscribe()
+				R.id.action_push_publish_data -> pushPublishData()
+				R.id.action_push_publish_notification -> pushPublishNotification()
+				R.id.action_push_publish_notification_bg -> pushPublishNotificationBackground()
+				R.id.action_push_direct_data -> pushDirectData()
+				R.id.action_push_direct_notification -> pushDirectNotification()
+				R.id.action_push_direct_notification_bg -> pushDirectNotificationBackground()
+				R.id.action_push_direct_data_client -> pushDirectDataClient()
+				R.id.action_get_local_device -> getLocalDevice()
+				R.id.action_reset_local_device -> resetLocalDevice()
+				R.id.action_get_activation_state -> getActivationState()
+				R.id.action_reset_activation_state -> resetActivationState()
+				R.id.action_push_subscribe_client -> pushSubscribeClient()
+				R.id.action_push_unsubscribe_client -> pushUnsubscribeClient()
                 R.id.action_regenerate_client_id -> regenerateClientId()
                 R.id.action_get_client_id -> printClientId()
-                else -> super.onOptionsItemSelected(item)
-            }
-        }catch (e: AblyException){
-            logger.e("Exception", "", e)
-        }
+				else -> super.onOptionsItemSelected(item)
+			}
+		} catch (e: AblyException) {
+			logger.e("Exception", "", e)
+		}
         return super.onOptionsItemSelected(item)
 	}
 
     fun uiButtonClick(view: View) {
-        try {
-            when (view.id) {
-                R.id.runTestBtn -> runPushTests()
-                R.id.activatePushBtn -> activatePush(true)
-                R.id.deactivatePushBtn -> deactivatePush(true)
-            }
-        }catch (e: Exception){
-            logger.e("Exception", "", e)
-        }
+		try {
+			when (view.id) {
+				R.id.runTestBtn -> runPushTests()
+				R.id.activatePushBtn -> activatePush(true)
+				R.id.deactivatePushBtn -> deactivatePush(true)
+			}
+		} catch (e: AblyException) {
+			logger.e("Exception", "", e)
+		}
     }
 }
