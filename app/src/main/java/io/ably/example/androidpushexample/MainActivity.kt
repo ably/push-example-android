@@ -377,9 +377,6 @@ class MainActivity : AppCompatActivity() {
 				logger.i("realtimeSubscribe()", ".. channel attached")
 			}
 		}
-		if(error != null) {
-			throw AblyException.fromErrorInfo(error)
-		}
 		return true
 	}
 
@@ -431,9 +428,6 @@ class MainActivity : AppCompatActivity() {
 				logger.i("pushSubscribe()", ".. push subscription complete")
 			}
 		}
-		if(error != null) {
-			throw AblyException.fromErrorInfo(error)
-		}
 		return true
 	}
 
@@ -463,9 +457,6 @@ class MainActivity : AppCompatActivity() {
 				waiter.wait()
 				logger.i("pushSubscribe()", ".. unsubscribe complete")
 			}
-		}
-		if(error != null) {
-			throw AblyException.fromErrorInfo(error)
 		}
 		return true
 	}
@@ -503,9 +494,6 @@ class MainActivity : AppCompatActivity() {
 				waiter.wait()
 				logger.i("pushPublishData()", ".. push publish complete")
 			}
-		}
-		if(error != null) {
-			throw AblyException.fromErrorInfo(error)
 		}
 		return true
 	}
@@ -547,9 +535,6 @@ class MainActivity : AppCompatActivity() {
 				waiter.wait()
 				logger.i("pushPublishNotification()", ".. push publish complete")
 			}
-		}
-		if(error != null) {
-			throw AblyException.fromErrorInfo(error)
 		}
 		return true
 	}
@@ -601,9 +586,6 @@ class MainActivity : AppCompatActivity() {
 				logger.i("pushDirectData()", ".. push publish complete")
 			}
 		}
-		if(error != null) {
-			throw AblyException.fromErrorInfo(error)
-		}
 		return true
 	}
 
@@ -637,9 +619,6 @@ class MainActivity : AppCompatActivity() {
 				waiter.wait()
 				logger.i("pushDirectDataClient()", ".. push publish complete")
 			}
-		}
-		if(error != null) {
-			throw AblyException.fromErrorInfo(error)
 		}
 		return true
 	}
@@ -677,9 +656,6 @@ class MainActivity : AppCompatActivity() {
 				waiter.wait()
 				logger.i("pushDirectData()", ".. push publish complete")
 			}
-		}
-		if(error != null) {
-			throw AblyException.fromErrorInfo(error)
 		}
 		return true
 	}
@@ -732,9 +708,6 @@ class MainActivity : AppCompatActivity() {
                 logger.i("pushSubscribeClient()", ".. push subscription complete")
             }
         }
-        if (error != null) {
-            throw AblyException.fromErrorInfo(error)
-        }
         return true
     }
 
@@ -765,9 +738,6 @@ class MainActivity : AppCompatActivity() {
                 waiter.wait()
                 logger.i("pushUnsubscribeClient()", ".. unsubscribe complete")
             }
-        }
-        if (error != null) {
-            throw AblyException.fromErrorInfo(error)
         }
         return true
     }
