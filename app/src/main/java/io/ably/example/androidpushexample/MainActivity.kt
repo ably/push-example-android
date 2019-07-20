@@ -301,10 +301,6 @@ class MainActivity : AppCompatActivity() {
 	fun activatePush(wait:Boolean = false):Boolean {
 		object:Thread() {
 			override fun run() {
-				/* activate Firebase */
-				logger.i("activatePush()", "initialising Firebase")
-				FirebaseInstanceId.getInstance().getToken()
-
 				synchronized(pushActivateReceiver) {
 					/* ensure the Ably library registers any new token with the server */
 					logger.i("activatePush()", "activating push system .. waiting")
