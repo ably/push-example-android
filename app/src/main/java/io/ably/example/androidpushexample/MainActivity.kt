@@ -212,12 +212,9 @@ class MainActivity : AppCompatActivity() {
 	 */
 	fun initAbly():Boolean {
 		val adminOptions = ClientOptions(apiKey)
-		adminOptions.environment = environment
 		adminOptions.logLevel = io.ably.lib.util.Log.VERBOSE
-		ablyForAdmin = AblyRest(adminOptions)
 
 		val deviceOptions = ClientOptions()
-		deviceOptions.environment = environment
 		deviceOptions.logLevel = io.ably.lib.util.Log.VERBOSE
 
 		/* ensure that the device client has push-subscribe */
@@ -229,6 +226,13 @@ class MainActivity : AppCompatActivity() {
                 return ablyForAdmin.auth.requestToken(deviceTokenParams, null)
             }
         }
+
+		if (!environment.isNullOrEmpty()) {
+			adminOptions.environment = environment
+			deviceOptions.environment = environment
+		}
+
+		ablyForAdmin = AblyRest(adminOptions)
 		ablyForDevice = AblyRealtime(deviceOptions)
 
 		/* this is necessary before the ablyForDevice can perform any operations that depend on
