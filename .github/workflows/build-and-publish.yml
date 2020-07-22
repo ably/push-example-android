@@ -1,4 +1,4 @@
-name: Build Android App and Publish to BrowserStack
+name: Build and Publish
 on:
   workflow_dispatch:
     inputs:
