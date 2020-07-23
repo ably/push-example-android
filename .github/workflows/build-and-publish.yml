@@ -30,3 +30,11 @@ jobs:
       # app/build/outputs/apk/debug/app-debug.apk
       - name: Build APK using Gradle
         run: ./gradlew assembleDebug
+
+      # per BrowserStack's instructions here:
+      # https://www.browserstack.com/docs/app-live/integrations/fastlane
+      - name: Upload APK to BrowserStack using fastlane
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+        run: fastlane upload
