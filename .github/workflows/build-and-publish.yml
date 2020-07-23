@@ -1,10 +1,6 @@
 name: Build and Publish
 on:
   workflow_dispatch:
-    inputs:
-      reason:
-        description: "Reason for making a new build"
-        required: true
 
 jobs:
   checkout-and-build:
@@ -20,8 +16,7 @@ jobs:
         env:
           ABLY_API_KEY: ${{ secrets.ABLY_API_KEY }}
         run: |
-          echo "build.reason=${{ github.event.inputs.reason }}" > local.properties
-          echo "ably.key=$ABLY_API_KEY" >> local.properties
+          echo "ably.key=$ABLY_API_KEY" > local.properties
           echo "ably.env=production" >> local.properties
       - name: Generate Google Services file for Gradle build to use
         env:
