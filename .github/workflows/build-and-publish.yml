@@ -10,6 +10,7 @@ jobs:
       # https://github.com/actions/checkout
       # https://docs.github.com/en/actions/configuring-and-managing-workflows/using-environment-variables#default-environment-variables
       - uses: actions/checkout@v2
+
       # Run commands using the shell (which is bash on non-Windows platforms)
       # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idstepsrun
       - name: Generate Local Properties file for Gradle build to use
@@ -18,6 +19,7 @@ jobs:
         run: |
           echo "ably.key=$ABLY_API_KEY" > local.properties
           echo "ably.env=production" >> local.properties
+
       - name: Generate Google Services file for Gradle build to use
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
